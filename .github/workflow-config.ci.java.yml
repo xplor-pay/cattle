@@ -1,0 +1,48 @@
+configuration:
+
+  ########################################################################################################
+  # Java CI Settings for Continuous Integration
+  ########################################################################################################
+
+  # The version of Java to use for CI. Must stay in sync with clearent-java13-parent-pom.
+  # Leave empty to resolve the version from .tool-versions instead.
+  java_version: ''
+
+  # Ignored while java_download_url is set. Left empty because no distribution
+  # still publishes JDK 13, so there is no valid keyword to fall back to.
+  #
+  # Valid values (actions/setup-java v6, case-sensitive):
+  #   corretto           Amazon Corretto
+  #   dragonwell         Alibaba Dragonwell
+  #   graalvm            Oracle GraalVM (JDK 17+)
+  #   graalvm-community  GraalVM Community (JDK 17+)
+  #   jetbrains          JetBrains Runtime (LTS 11+)
+  #   kona               Tencent Kona (8, 11, 17, 21, 25)
+  #   liberica           BellSoft Liberica
+  #   liberica-nik       Liberica Native Image Kit
+  #   microsoft          Microsoft Build of OpenJDK
+  #   oracle             Oracle JDK (17+)
+  #   oracle-openjdk     Oracle OpenJDK
+  #   redhat             Red Hat Build of OpenJDK
+  #   sapmachine         SAP SapMachine
+  #   semeru             IBM Semeru (OpenJ9)
+  #   temurin            Eclipse Temurin
+  #   zulu               Azul Zulu
+  #
+  # 'adopt', 'adopt-hotspot' and 'adopt-openj9' were removed in v6.
+  # Use 'temurin' or 'semeru' instead.
+  #
+  # Leave empty to infer the distribution from the vendor prefix in .tool-versions
+  # (e.g. "java temurin-17.0.7+7"). Do not set 'jdkfile' here; use java_download_url.
+  java_distribution: ''
+
+  # Optional HTTPS URL to a JDK tarball, for versions no distribution still publishes.
+  # Takes priority over java_distribution. Requires java_version and java_download_sha256.
+  # For example, here is the value for Java 13:
+  # https://github.com/AdoptOpenJDK/openjdk13-binaries/releases/download/jdk-13.0.2%2B8/OpenJDK13U-jdk_x64_linux_hotspot_13.0.2_8.tar.gz
+  java_download_url: ''
+
+  # SHA-256 of the tarball above. Published at <java_download_url>.sha256.txt.
+  # For example, here is the value for the Java 13 link in the above property's comment:
+  # 9ccc063569f19899fd08e41466f8c4cd4e05058abdb5178fa374cb365dcf5998
+  java_download_sha256: ''

@@ -1,0 +1,26 @@
+configuration:
+
+  ########################################################################################################
+  # Jira AIO Settings for CI/CD
+  ########################################################################################################
+
+  # This flags enables/disables publish to Jira AIO for this repository
+  enable_jira_aio: false
+
+  # The dev team name that owns or is primarily responsible for maintaining the repository
+  jira_aio_team: ''
+
+  # If acceptance tests are supported for this repo, this is the Jira AIO Test Project Key
+  jira_aio_project_key: ''
+
+  # If acceptance tests are supported for this repo, this is the title of the Jira AIO test cycle run
+  jira_aio_cycle_title: ''
+
+  # If acceptance tests are supported for this repo, this is the folder for the Jira AIO test cycle run
+  jira_aio_cycle_folder: ''
+
+  # The path or glob pattern to the test result file relative to the workspace root.
+  # For example, TestResults/all_tests.trx or build/junit.xml
+  # To use the default location, leave this field blank.
+  # For .NET, the default is the TestResults folder.
+  jira_aio_report_path_override: ''

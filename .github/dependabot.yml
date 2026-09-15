@@ -1,0 +1,94 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "cron"
+      cronjob: "0 20 8-14 * 0" # Runs at 8:00 PM Central on the second Sunday of every month
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 10
+    
+    groups:
+      actions-major-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+
+      actions-minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "cron"
+      cronjob: "0 0 8-14 * 1" # Runs at 12:00 AM Central on the second Monday of every month
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 10
+    groups:
+      maven-major-updates:
+        patterns:
+          - "org.springframework*"
+          - "io.projectreactor*"
+          - "org.junit*"
+          - "org.mockito*"
+        update-types:
+          - "major"
+
+      maven-minor-updates:
+        patterns:
+          - "org.springframework*"
+          - "io.projectreactor*"
+          - "org.junit*"
+          - "org.mockito*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      first-party-major-updates:
+        patterns:
+          - "com.clearent*"
+        update-types:
+          - "major"
+
+      first-party-minor-updates:
+        patterns:
+          - "com.clearent*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      third-party-major-updates:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "org.springframework*"
+          - "io.projectreactor*"
+          - "org.junit*"
+          - "org.mockito*"
+          - "com.clearent*"
+        update-types:
+          - "major"
+
+      third-party-minor-updates:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "org.springframework*"
+          - "io.projectreactor*"
+          - "org.junit*"
+          - "org.mockito*"
+          - "com.clearent*"
+        update-types:
+          - "minor"
+          - "patch"

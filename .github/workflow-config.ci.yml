@@ -1,0 +1,24 @@
+configuration:
+
+  ########################################################################################################
+  # Continuous Integration Settings
+  ########################################################################################################
+
+  # Whether to enable caching of dependencies during the build process.
+  enable_dependency_cache: false
+
+  # Whether to skip unit tests during the build process.
+  skip_unit_tests: false
+
+  # Skip running integration tests during CI workflow execution
+  # Note: Currently, integration tests are only supported in .NET workflows
+  skip_integration_tests: true
+
+  # The minimum code coverage percentage required for the build to pass.
+  minimum_code_coverage: 0
+
+  # Whether to skip linting during the build process.
+  skip_linting: false
+
+  # If linting is enabled, whether to continue the build process even if linting errors occur.
+  continue_on_linting_error: true

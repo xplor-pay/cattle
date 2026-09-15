@@ -1,0 +1,442 @@
+name: CD (Breakglass)
+
+run-name: >-
+  ${{
+   format(
+     'CD (Breakglass) • Image {0} • Attempt #{1}',
+     inputs['Container Image Tag'],
+     github.run_attempt
+   )
+  }}
+
+# Define what triggers the workflow
+on:
+  workflow_dispatch:
+    inputs:
+      "Container Image Tag":
+        description: "The container image tag to deploy"
+        required: true
+        type: string
+
+      "Deploy to Compass DEV":
+        description: "Deploy to Compass DEV"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Compass QA":
+        description: "Deploy to Compass QA"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Compass INT":
+        description: "Deploy to Compass INT"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Compass PROD (LNX)":
+        description: "Deploy to Compass PROD (LNX)"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Compass PROD (STL)":
+        description: "Deploy to Compass PROD (STL)"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Horizon DEV":
+        description: "Deploy to Horizon DEV"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Horizon QA":
+        description: "Deploy to Horizon QA"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Horizon INT":
+        description: "Deploy to Horizon INT"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Horizon PROD (LNX)":
+        description: "Deploy to Horizon PROD (LNX)"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Horizon PROD (STL)":
+        description: "Deploy to Horizon PROD (STL)"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Launch DEV":
+        description: "Deploy to Launch DEV"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Launch QA":
+        description: "Deploy to Launch QA"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Launch INT":
+        description: "Deploy to Launch INT"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Launch PROD (LNX)":
+        description: "Deploy to Launch PROD (LNX)"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Launch PROD (STL)":
+        description: "Deploy to Launch PROD (STL)"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Quest DEV":
+        description: "Deploy to Quest DEV"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Quest QA":
+        description: "Deploy to Quest QA"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Quest INT":
+        description: "Deploy to Quest INT"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Quest PROD (LNX)":
+        description: "Deploy to Quest PROD (LNX)"
+        required: true
+        type: boolean
+        default: true
+
+      "Deploy to Quest PROD (STL)":
+        description: "Deploy to Quest PROD (STL)"
+        required: true
+        type: boolean
+        default: true
+
+      "Acceptance Test Repo Branch":
+        description: "(Optional) Specify a branch for the Acceptance Test Repo, or leave as-is for the default branch"
+        required: false
+        type: string
+        default: "main"
+
+      "Jira AIO Cycle Key":
+        description: "(Optional) The existing cycle key for Jira AIO if appending to an existing cycle."
+        required: false
+        type: string
+        default: ""
+
+# Cancel any workflows already in progress if new commits are pushed to the same branch; keep manual dispatch runs stable
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+# Permissions required by this workflow
+permissions:
+  pull-requests: write
+  contents: write
+  checks: write
+  actions: read
+  packages: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+# The work the workflow will perform
+jobs:
+
+  resolve_config:
+    name: Resolve Config
+    uses: xplor-pay/github-actions/.github/workflows/parse-workflow-config-reusable.yml@main
+
+  resolve_targets:
+    name: Resolve Deploy Targets
+
+    runs-on:
+      group: CHQ
+      labels: linux
+
+    outputs:
+      deploy_to_compass: ${{ steps.out.outputs.deploy_to_compass }}
+      deploy_to_horizon: ${{ steps.out.outputs.deploy_to_horizon }}
+      deploy_to_launch: ${{ steps.out.outputs.deploy_to_launch }}
+      deploy_to_quest: ${{ steps.out.outputs.deploy_to_quest }}
+
+    steps:
+      - id: out
+        shell: bash
+        env:
+          DEPLOY_TO_COMPASS_DEV: ${{ inputs['Deploy to Compass DEV'] }}
+          DEPLOY_TO_COMPASS_QA: ${{ inputs['Deploy to Compass QA'] }}
+          DEPLOY_TO_COMPASS_INT: ${{ inputs['Deploy to Compass INT'] }}
+          DEPLOY_TO_COMPASS_PROD_LNX: ${{ inputs['Deploy to Compass PROD (LNX)'] }}
+          DEPLOY_TO_COMPASS_PROD_STL: ${{ inputs['Deploy to Compass PROD (STL)'] }}
+          DEPLOY_TO_HORIZON_DEV: ${{ inputs['Deploy to Horizon DEV'] }}
+          DEPLOY_TO_HORIZON_QA: ${{ inputs['Deploy to Horizon QA'] }}
+          DEPLOY_TO_HORIZON_INT: ${{ inputs['Deploy to Horizon INT'] }}
+          DEPLOY_TO_HORIZON_PROD_LNX: ${{ inputs['Deploy to Horizon PROD (LNX)'] }}
+          DEPLOY_TO_HORIZON_PROD_STL: ${{ inputs['Deploy to Horizon PROD (STL)'] }}
+          DEPLOY_TO_LAUNCH_DEV: ${{ inputs['Deploy to Launch DEV'] }}
+          DEPLOY_TO_LAUNCH_QA: ${{ inputs['Deploy to Launch QA'] }}
+          DEPLOY_TO_LAUNCH_INT: ${{ inputs['Deploy to Launch INT'] }}
+          DEPLOY_TO_LAUNCH_PROD_LNX: ${{ inputs['Deploy to Launch PROD (LNX)'] }}
+          DEPLOY_TO_LAUNCH_PROD_STL: ${{ inputs['Deploy to Launch PROD (STL)'] }}
+          DEPLOY_TO_QUEST_DEV: ${{ inputs['Deploy to Quest DEV'] }}
+          DEPLOY_TO_QUEST_QA: ${{ inputs['Deploy to Quest QA'] }}
+          DEPLOY_TO_QUEST_INT: ${{ inputs['Deploy to Quest INT'] }}
+          DEPLOY_TO_QUEST_PROD_LNX: ${{ inputs['Deploy to Quest PROD (LNX)'] }}
+          DEPLOY_TO_QUEST_PROD_STL: ${{ inputs['Deploy to Quest PROD (STL)'] }}
+        run: |
+          deploy_to_compass=false
+          deploy_to_horizon=false
+          deploy_to_launch=false
+          deploy_to_quest=false
+
+          if [[ "${DEPLOY_TO_COMPASS_DEV}" == "true" || "${DEPLOY_TO_COMPASS_QA}" == "true" || "${DEPLOY_TO_COMPASS_INT}" == "true" || "${DEPLOY_TO_COMPASS_PROD_LNX}" == "true" || "${DEPLOY_TO_COMPASS_PROD_STL}" == "true" ]]; then
+            deploy_to_compass=true
+          fi
+
+          if [[ "${DEPLOY_TO_HORIZON_DEV}" == "true" || "${DEPLOY_TO_HORIZON_QA}" == "true" || "${DEPLOY_TO_HORIZON_INT}" == "true" || "${DEPLOY_TO_HORIZON_PROD_LNX}" == "true" || "${DEPLOY_TO_HORIZON_PROD_STL}" == "true" ]]; then
+            deploy_to_horizon=true
+          fi
+
+          if [[ "${DEPLOY_TO_LAUNCH_DEV}" == "true" || "${DEPLOY_TO_LAUNCH_QA}" == "true" || "${DEPLOY_TO_LAUNCH_INT}" == "true" || "${DEPLOY_TO_LAUNCH_PROD_LNX}" == "true" || "${DEPLOY_TO_LAUNCH_PROD_STL}" == "true" ]]; then
+            deploy_to_launch=true
+          fi
+
+          if [[ "${DEPLOY_TO_QUEST_DEV}" == "true" || "${DEPLOY_TO_QUEST_QA}" == "true" || "${DEPLOY_TO_QUEST_INT}" == "true" || "${DEPLOY_TO_QUEST_PROD_LNX}" == "true" || "${DEPLOY_TO_QUEST_PROD_STL}" == "true" ]]; then
+            deploy_to_quest=true
+          fi
+
+          echo "deploy_to_compass=${deploy_to_compass}" >> "$GITHUB_OUTPUT"
+          echo "deploy_to_horizon=${deploy_to_horizon}" >> "$GITHUB_OUTPUT"
+          echo "deploy_to_launch=${deploy_to_launch}" >> "$GITHUB_OUTPUT"
+          echo "deploy_to_quest=${deploy_to_quest}" >> "$GITHUB_OUTPUT"
+
+  deploy_compass:
+    name: CD
+    if: ${{ needs.resolve_targets.outputs.deploy_to_compass == 'true' }}
+    needs: [ resolve_config, resolve_targets ]
+    uses: xplor-pay/github-actions/.github/workflows/java-deploy-to-environment-reusable.yml@main
+    with:
+      rancher_environment_name: 'Compass'
+      rancher_stack_name: ${{ needs.resolve_config.outputs.rancher_stack_name }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_scale_dev: ${{ fromJSON(needs.resolve_config.outputs.container_scale_dev) }}
+      container_scale_qa: ${{ fromJSON(needs.resolve_config.outputs.container_scale_qa) }}
+      container_scale_int: ${{ fromJSON(needs.resolve_config.outputs.container_scale_int) }}
+      container_scale_prod_lnx: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_lnx) }}
+      container_scale_prod_stl: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_stl) }}
+      application_type: ${{ needs.resolve_config.outputs.application_type }}
+      image_tag: ${{ inputs['Container Image Tag'] }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+      skip_acceptance_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_acceptance_tests || 'true') }}
+      acceptance_test_repo: ${{ needs.resolve_config.outputs.acceptance_test_repo }}
+      acceptance_test_repo_branch: ${{ inputs['Acceptance Test Repo Branch'] }}
+      acceptance_test_parameters: ${{ needs.resolve_config.outputs.acceptance_test_params_compass != '' && needs.resolve_config.outputs.acceptance_test_params_compass || needs.resolve_config.outputs.acceptance_test_params }}
+      cron_expression: ${{ needs.resolve_config.outputs.cron_job_schedule }}
+      java_options: ${{ needs.resolve_config.outputs.java_options }}
+      enable_jira_aio: ${{ fromJSON(needs.resolve_config.outputs.enable_jira_aio || 'false') }}
+      jira_aio_cycle_key: ${{ inputs['Jira AIO Cycle Key'] }}
+      jira_aio_team: ${{ needs.resolve_config.outputs.jira_aio_team }}
+      jira_aio_project_key: ${{ needs.resolve_config.outputs.jira_aio_project_key }}
+      jira_aio_cycle_title: ${{ needs.resolve_config.outputs.jira_aio_cycle_title }}
+      jira_aio_cycle_folder: ${{ needs.resolve_config.outputs.jira_aio_cycle_folder }}
+      jira_aio_report_path_override: ${{ needs.resolve_config.outputs.jira_aio_report_path_override }}
+      deploy_to_dev: ${{ inputs['Deploy to Compass DEV'] }}
+      deploy_to_qa: ${{ inputs['Deploy to Compass QA'] }}
+      deploy_to_int: ${{ inputs['Deploy to Compass INT'] }}
+      deploy_to_prod_lnx: ${{ inputs['Deploy to Compass PROD (LNX)'] }}
+      deploy_to_prod_stl: ${{ inputs['Deploy to Compass PROD (STL)'] }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      JIRA_AIO_API_TOKEN: ${{ secrets.JIRA_AIO_API_TOKEN }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      RANCHER_DEV: ${{ secrets.RANCHER1_COMPASS_DEV }}
+      RANCHER_QA: ${{ secrets.RANCHER1_COMPASS_QA }}
+      RANCHER_INT: ${{ secrets.RANCHER1_COMPASS_INT }}
+      RANCHER_PROD_LNX: ${{ secrets.RANCHER1_COMPASS_PROD_LNX }}
+      RANCHER_PROD_STL: ${{ secrets.RANCHER1_COMPASS_PROD_STL }}
+      ENVIRONMENT_PROVISIONER_APP_CLIENT_ID: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_CLIENT_ID }}
+      ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY }}
+
+  deploy_horizon:
+    name: CD
+    if: ${{ needs.resolve_targets.outputs.deploy_to_horizon == 'true' }}
+    needs: [ resolve_config, resolve_targets ]
+    uses: xplor-pay/github-actions/.github/workflows/java-deploy-to-environment-reusable.yml@main
+    with:
+      rancher_environment_name: 'Horizon'
+      rancher_stack_name: ${{ needs.resolve_config.outputs.rancher_stack_name }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_scale_dev: ${{ fromJSON(needs.resolve_config.outputs.container_scale_dev) }}
+      container_scale_qa: ${{ fromJSON(needs.resolve_config.outputs.container_scale_qa) }}
+      container_scale_int: ${{ fromJSON(needs.resolve_config.outputs.container_scale_int) }}
+      container_scale_prod_lnx: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_lnx) }}
+      container_scale_prod_stl: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_stl) }}
+      application_type: ${{ needs.resolve_config.outputs.application_type }}
+      image_tag: ${{ inputs['Container Image Tag'] }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+      skip_acceptance_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_acceptance_tests || 'true') }}
+      acceptance_test_repo: ${{ needs.resolve_config.outputs.acceptance_test_repo }}
+      acceptance_test_repo_branch: ${{ inputs['Acceptance Test Repo Branch'] }}
+      acceptance_test_parameters: ${{ needs.resolve_config.outputs.acceptance_test_params_horizon != '' && needs.resolve_config.outputs.acceptance_test_params_horizon || needs.resolve_config.outputs.acceptance_test_params }}
+      cron_expression: ${{ needs.resolve_config.outputs.cron_job_schedule }}
+      java_options: ${{ needs.resolve_config.outputs.java_options }}
+      enable_jira_aio: ${{ fromJSON(needs.resolve_config.outputs.enable_jira_aio || 'false') }}
+      jira_aio_cycle_key: ${{ inputs['Jira AIO Cycle Key'] }}
+      jira_aio_team: ${{ needs.resolve_config.outputs.jira_aio_team }}
+      jira_aio_project_key: ${{ needs.resolve_config.outputs.jira_aio_project_key }}
+      jira_aio_cycle_title: ${{ needs.resolve_config.outputs.jira_aio_cycle_title }}
+      jira_aio_cycle_folder: ${{ needs.resolve_config.outputs.jira_aio_cycle_folder }}
+      jira_aio_report_path_override: ${{ needs.resolve_config.outputs.jira_aio_report_path_override }}
+      deploy_to_dev: ${{ inputs['Deploy to Horizon DEV'] }}
+      deploy_to_qa: ${{ inputs['Deploy to Horizon QA'] }}
+      deploy_to_int: ${{ inputs['Deploy to Horizon INT'] }}
+      deploy_to_prod_lnx: ${{ inputs['Deploy to Horizon PROD (LNX)'] }}
+      deploy_to_prod_stl: ${{ inputs['Deploy to Horizon PROD (STL)'] }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      JIRA_AIO_API_TOKEN: ${{ secrets.JIRA_AIO_API_TOKEN }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      RANCHER_DEV: ${{ secrets.RANCHER1_HORIZON_DEV }}
+      RANCHER_QA: ${{ secrets.RANCHER1_HORIZON_QA }}
+      RANCHER_INT: ${{ secrets.RANCHER1_HORIZON_INT }}
+      RANCHER_PROD_LNX: ${{ secrets.RANCHER1_HORIZON_PROD_LNX }}
+      RANCHER_PROD_STL: ${{ secrets.RANCHER1_HORIZON_PROD_STL }}
+      ENVIRONMENT_PROVISIONER_APP_CLIENT_ID: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_CLIENT_ID }}
+      ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY }}
+
+  deploy_launch:
+    name: CD
+    if: ${{ needs.resolve_targets.outputs.deploy_to_launch == 'true' }}
+    needs: [ resolve_config, resolve_targets ]
+    uses: xplor-pay/github-actions/.github/workflows/java-deploy-to-environment-reusable.yml@main
+    with:
+      rancher_environment_name: 'Launch'
+      rancher_stack_name: ${{ needs.resolve_config.outputs.rancher_stack_name }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_scale_dev: ${{ fromJSON(needs.resolve_config.outputs.container_scale_dev) }}
+      container_scale_qa: ${{ fromJSON(needs.resolve_config.outputs.container_scale_qa) }}
+      container_scale_int: ${{ fromJSON(needs.resolve_config.outputs.container_scale_int) }}
+      container_scale_prod_lnx: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_lnx) }}
+      container_scale_prod_stl: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_stl) }}
+      application_type: ${{ needs.resolve_config.outputs.application_type }}
+      image_tag: ${{ inputs['Container Image Tag'] }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+      skip_acceptance_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_acceptance_tests || 'true') }}
+      acceptance_test_repo: ${{ needs.resolve_config.outputs.acceptance_test_repo }}
+      acceptance_test_repo_branch: ${{ inputs['Acceptance Test Repo Branch'] }}
+      acceptance_test_parameters: ${{ needs.resolve_config.outputs.acceptance_test_params_launch != '' && needs.resolve_config.outputs.acceptance_test_params_launch || needs.resolve_config.outputs.acceptance_test_params }}
+      cron_expression: ${{ needs.resolve_config.outputs.cron_job_schedule }}
+      java_options: ${{ needs.resolve_config.outputs.java_options }}
+      enable_jira_aio: ${{ fromJSON(needs.resolve_config.outputs.enable_jira_aio || 'false') }}
+      jira_aio_cycle_key: ${{ inputs['Jira AIO Cycle Key'] }}
+      jira_aio_team: ${{ needs.resolve_config.outputs.jira_aio_team }}
+      jira_aio_project_key: ${{ needs.resolve_config.outputs.jira_aio_project_key }}
+      jira_aio_cycle_title: ${{ needs.resolve_config.outputs.jira_aio_cycle_title }}
+      jira_aio_cycle_folder: ${{ needs.resolve_config.outputs.jira_aio_cycle_folder }}
+      jira_aio_report_path_override: ${{ needs.resolve_config.outputs.jira_aio_report_path_override }}
+      deploy_to_dev: ${{ inputs['Deploy to Launch DEV'] }}
+      deploy_to_qa: ${{ inputs['Deploy to Launch QA'] }}
+      deploy_to_int: ${{ inputs['Deploy to Launch INT'] }}
+      deploy_to_prod_lnx: ${{ inputs['Deploy to Launch PROD (LNX)'] }}
+      deploy_to_prod_stl: ${{ inputs['Deploy to Launch PROD (STL)'] }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      JIRA_AIO_API_TOKEN: ${{ secrets.JIRA_AIO_API_TOKEN }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      RANCHER_DEV: ${{ secrets.RANCHER1_LAUNCH_DEV }}
+      RANCHER_QA: ${{ secrets.RANCHER1_LAUNCH_QA }}
+      RANCHER_INT: ${{ secrets.RANCHER1_LAUNCH_INT }}
+      RANCHER_PROD_LNX: ${{ secrets.RANCHER1_LAUNCH_PROD_LNX }}
+      RANCHER_PROD_STL: ${{ secrets.RANCHER1_LAUNCH_PROD_STL }}
+      ENVIRONMENT_PROVISIONER_APP_CLIENT_ID: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_CLIENT_ID }}
+      ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY }}
+
+  deploy_quest:
+    name: CD
+    if: ${{ needs.resolve_targets.outputs.deploy_to_quest == 'true' }}
+    needs: [ resolve_config, resolve_targets ]
+    uses: xplor-pay/github-actions/.github/workflows/java-deploy-to-environment-reusable.yml@main
+    with:
+      rancher_environment_name: 'Quest'
+      rancher_stack_name: ${{ needs.resolve_config.outputs.rancher_stack_name }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_scale_dev: ${{ fromJSON(needs.resolve_config.outputs.container_scale_dev) }}
+      container_scale_qa: ${{ fromJSON(needs.resolve_config.outputs.container_scale_qa) }}
+      container_scale_int: ${{ fromJSON(needs.resolve_config.outputs.container_scale_int) }}
+      container_scale_prod_lnx: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_lnx) }}
+      container_scale_prod_stl: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_stl) }}
+      application_type: ${{ needs.resolve_config.outputs.application_type }}
+      image_tag: ${{ inputs['Container Image Tag'] }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+      skip_acceptance_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_acceptance_tests || 'true') }}
+      acceptance_test_repo: ${{ needs.resolve_config.outputs.acceptance_test_repo }}
+      acceptance_test_repo_branch: ${{ inputs['Acceptance Test Repo Branch'] }}
+      acceptance_test_parameters: ${{ needs.resolve_config.outputs.acceptance_test_params_quest != '' && needs.resolve_config.outputs.acceptance_test_params_quest || needs.resolve_config.outputs.acceptance_test_params }}
+      cron_expression: ${{ needs.resolve_config.outputs.cron_job_schedule }}
+      java_options: ${{ needs.resolve_config.outputs.java_options }}
+      enable_jira_aio: ${{ fromJSON(needs.resolve_config.outputs.enable_jira_aio || 'false') }}
+      jira_aio_cycle_key: ${{ inputs['Jira AIO Cycle Key'] }}
+      jira_aio_team: ${{ needs.resolve_config.outputs.jira_aio_team }}
+      jira_aio_project_key: ${{ needs.resolve_config.outputs.jira_aio_project_key }}
+      jira_aio_cycle_title: ${{ needs.resolve_config.outputs.jira_aio_cycle_title }}
+      jira_aio_cycle_folder: ${{ needs.resolve_config.outputs.jira_aio_cycle_folder }}
+      jira_aio_report_path_override: ${{ needs.resolve_config.outputs.jira_aio_report_path_override }}
+      deploy_to_dev: ${{ inputs['Deploy to Quest DEV'] }}
+      deploy_to_qa: ${{ inputs['Deploy to Quest QA'] }}
+      deploy_to_int: ${{ inputs['Deploy to Quest INT'] }}
+      deploy_to_prod_lnx: ${{ inputs['Deploy to Quest PROD (LNX)'] }}
+      deploy_to_prod_stl: ${{ inputs['Deploy to Quest PROD (STL)'] }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      JIRA_AIO_API_TOKEN: ${{ secrets.JIRA_AIO_API_TOKEN }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      RANCHER_DEV: ${{ secrets.RANCHER1_QUEST_DEV }}
+      RANCHER_QA: ${{ secrets.RANCHER1_QUEST_QA }}
+      RANCHER_INT: ${{ secrets.RANCHER1_QUEST_INT }}
+      RANCHER_PROD_LNX: ${{ secrets.RANCHER1_QUEST_PROD_LNX }}
+      RANCHER_PROD_STL: ${{ secrets.RANCHER1_QUEST_PROD_STL }}
+      ENVIRONMENT_PROVISIONER_APP_CLIENT_ID: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_CLIENT_ID }}
+      ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY }}
+

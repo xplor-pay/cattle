@@ -1,0 +1,39 @@
+configuration:
+
+  ########################################################################################################
+  # Rancher Settings for CI/CD
+  ########################################################################################################
+
+  # The name of the Rancher stack
+  rancher_stack_name: 
+
+  # How many instances of the container to run in the DEV environment.
+  container_scale_dev: 
+
+  # How many instances of the container to run in the QA environment.
+  container_scale_qa: 
+
+  # How many instances of the container to run in the INT environment.
+  container_scale_int: 
+
+  # How many instances of the container to run in the PROD (LNX), formerly East, environment.
+  container_scale_prod_lnx: 
+
+  # How many instances of the container to run in the PROD (STL), formerly Central, environment.
+  container_scale_prod_stl: 
+
+  # (Optional) Override default acceptance test parameters for Compass deployments
+  # Please leave this as an empty string for default behavior.
+  acceptance_test_params_compass: ''
+
+  # (Optional) Override default acceptance test parameters for Horizon deployments
+  # Please leave this as an empty string for default behavior.
+  acceptance_test_params_horizon: ''
+
+  # (Optional) Override default acceptance test parameters for Launch deployments
+  # Please leave this as an empty string for default behavior.
+  acceptance_test_params_launch: ''
+
+  # (Optional) Override default acceptance test parameters for Quest deployments
+  # Please leave this as an empty string for default behavior.
+  acceptance_test_params_quest: ''

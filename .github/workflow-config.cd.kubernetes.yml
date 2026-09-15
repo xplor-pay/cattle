@@ -1,0 +1,42 @@
+configuration:
+
+  ########################################################################################################
+  # Kubernetes Settings for CI/CD
+  ########################################################################################################
+
+  # The name of the Kubernetes namespace
+  kubernetes_namespace: 
+
+  # The number of pod instances that should be running concurrently in the kubernetes cluster.
+  replica_count: 
+
+  # (Optional) The host for the ingress (kubernetes reverse proxy)
+  ingress_host: 
+
+  # (Optional) The path for the ingress to route traffic to this service
+  ingress_path: 
+
+  # (Optional) The second path for the ingress to route traffic to this service
+  ingress_path_2: 
+  
+  # (Optional) The third path for the ingress to route traffic to this service
+  ingress_path_3: 
+
+  # (Optional) Whether the service resides behind the edge service.
+  behind_edge_service: 
+
+  # (Optional) Java options for the service. Typically used to set a max heap size.
+  # For example: "-Xmx512m"
+  java_options: ''
+
+  # (Optional) Override default acceptance test parameters for Nexus deployments
+  # Please leave this as an empty string for default behavior.
+  acceptance_test_params_nexus: ''
+
+  # (Optional) Override default acceptance test parameters for Nexus AUEE deployments
+  # Please leave this as an empty string for default behavior.
+  acceptance_test_params_nexus_auee: ''
+  
+  # (Optional) Override default acceptance test parameters for Nexus USCS deployments
+  # Please leave this as an empty string for default behavior.
+  acceptance_test_params_nexus_uscs: ''

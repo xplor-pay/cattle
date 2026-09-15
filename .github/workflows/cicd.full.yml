@@ -1,0 +1,281 @@
+name: CI/CD (Full)
+
+run-name: >-
+  ${{
+    format(
+      'CI/CD (Full) • {0} • Attempt #{1}',
+      github.ref_name,
+      github.run_attempt
+    )
+  }}
+
+# Define what triggers the workflow
+on:
+  workflow_dispatch:
+    inputs:
+      "Deploy to Compass":
+        description: "Deploy to Compass"
+        required: false
+        type: boolean
+        default: true
+
+      "Deploy to Horizon":
+        description: "Deploy to Horizon"
+        required: false
+        type: boolean
+        default: true
+
+      "Deploy to Launch":
+        description: "Deploy to Launch"
+        required: false
+        type: boolean
+        default: true
+
+      "Deploy to Quest":
+        description: "Deploy to Quest"
+        required: false
+        type: boolean
+        default: true
+
+      "Acceptance Test Repo Branch":
+        description: "(Optional) Specify a branch for the Acceptance Test Repo, or leave as-is for the default branch"
+        required: false
+        type: string
+        default: "main"
+
+      "Jira AIO Cycle Key":
+        description: "(Optional) The existing cycle key for Jira AIO if appending to an existing cycle."
+        required: false
+        type: string
+        default: ""
+
+# Cancel any workflows already in progress if new commits are pushed to the same branch; keep manual dispatch runs stable
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+# Permissions required by this workflow
+permissions:
+  pull-requests: write
+  contents: write
+  checks: write
+  actions: read
+  packages: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+# The work the workflow will perform
+jobs:
+  resolve_config:
+    name: Resolve Config
+    uses: xplor-pay/github-actions/.github/workflows/parse-workflow-config-reusable.yml@main
+
+  ci:
+    name: CI
+    needs: [ resolve_config ]
+    uses: xplor-pay/github-actions/.github/workflows/java-ci-containerize-reusable.yml@main
+    with:
+      java_version: ${{ needs.resolve_config.outputs.java_version }}
+      java_distribution: ${{ needs.resolve_config.outputs.java_distribution }}
+      java_download_url: ${{ needs.resolve_config.outputs.java_download_url }}
+      java_download_sha256: ${{ needs.resolve_config.outputs.java_download_sha256 }}
+      enable_dependency_cache: ${{ fromJSON(needs.resolve_config.outputs.enable_dependency_cache || 'false') }}
+      minimum_code_coverage: ${{ needs.resolve_config.outputs.minimum_code_coverage != '' && needs.resolve_config.outputs.minimum_code_coverage || '0' }}
+      skip_unit_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_unit_tests || 'false') }}
+      skip_integration_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_integration_tests || 'true') }}
+      skip_linting: ${{ fromJSON(needs.resolve_config.outputs.skip_linting || 'false') }}
+      continue_on_linting_error: ${{ fromJson(needs.resolve_config.outputs.continue_on_linting_error || 'false') }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+
+  deploy_compass:
+    name: CD (Compass)
+    if: ${{ success() && !cancelled() && inputs['Deploy to Compass'] }}
+    needs: [ resolve_config, ci ]
+    uses: xplor-pay/github-actions/.github/workflows/java-deploy-to-environment-reusable.yml@main
+    with:
+      rancher_environment_name: 'Compass'
+      rancher_stack_name: ${{ needs.resolve_config.outputs.rancher_stack_name }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_scale_dev: ${{ fromJSON(needs.resolve_config.outputs.container_scale_dev) }}
+      container_scale_qa: ${{ fromJSON(needs.resolve_config.outputs.container_scale_qa) }}
+      container_scale_int: ${{ fromJSON(needs.resolve_config.outputs.container_scale_int) }}
+      container_scale_prod_lnx: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_lnx) }}
+      container_scale_prod_stl: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_stl) }}
+      application_type: ${{ needs.resolve_config.outputs.application_type }}
+      image_tag: ${{ needs.ci.outputs.image_tag }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+      skip_acceptance_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_acceptance_tests || 'true') }}
+      acceptance_test_repo: ${{ needs.resolve_config.outputs.acceptance_test_repo }}
+      acceptance_test_repo_branch: ${{ inputs['Acceptance Test Repo Branch'] }}
+      acceptance_test_parameters: ${{ needs.resolve_config.outputs.acceptance_test_params_compass != '' && needs.resolve_config.outputs.acceptance_test_params_compass || needs.resolve_config.outputs.acceptance_test_params }}
+      cron_expression: ${{ needs.resolve_config.outputs.cron_job_schedule }}
+      java_options: ${{ needs.resolve_config.outputs.java_options }}
+      enable_jira_aio: ${{ fromJSON(needs.resolve_config.outputs.enable_jira_aio || 'false') }}
+      jira_aio_cycle_key: ${{ inputs['Jira AIO Cycle Key'] }}
+      jira_aio_team: ${{ needs.resolve_config.outputs.jira_aio_team }}
+      jira_aio_project_key: ${{ needs.resolve_config.outputs.jira_aio_project_key }}
+      jira_aio_cycle_title: ${{ needs.resolve_config.outputs.jira_aio_cycle_title }}
+      jira_aio_cycle_folder: ${{ needs.resolve_config.outputs.jira_aio_cycle_folder }}
+      jira_aio_report_path_override: ${{ needs.resolve_config.outputs.jira_aio_report_path_override }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      JIRA_AIO_API_TOKEN: ${{ secrets.JIRA_AIO_API_TOKEN }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      RANCHER_DEV: ${{ secrets.RANCHER1_COMPASS_DEV }}
+      RANCHER_QA: ${{ secrets.RANCHER1_COMPASS_QA }}
+      RANCHER_INT: ${{ secrets.RANCHER1_COMPASS_INT }}
+      RANCHER_PROD_LNX: ${{ secrets.RANCHER1_COMPASS_PROD_LNX }}
+      RANCHER_PROD_STL: ${{ secrets.RANCHER1_COMPASS_PROD_STL }}
+      ENVIRONMENT_PROVISIONER_APP_CLIENT_ID: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_CLIENT_ID }}
+      ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY }}
+
+  deploy_horizon:
+    name: CD (Horizon)
+    if: ${{ success() && !cancelled() && inputs['Deploy to Horizon'] }}
+    needs: [ resolve_config, ci ]
+    uses: xplor-pay/github-actions/.github/workflows/java-deploy-to-environment-reusable.yml@main
+    with:
+      rancher_environment_name: 'Horizon'
+      rancher_stack_name: ${{ needs.resolve_config.outputs.rancher_stack_name }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_scale_dev: ${{ fromJSON(needs.resolve_config.outputs.container_scale_dev) }}
+      container_scale_qa: ${{ fromJSON(needs.resolve_config.outputs.container_scale_qa) }}
+      container_scale_int: ${{ fromJSON(needs.resolve_config.outputs.container_scale_int) }}
+      container_scale_prod_lnx: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_lnx) }}
+      container_scale_prod_stl: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_stl) }}
+      application_type: ${{ needs.resolve_config.outputs.application_type }}
+      image_tag: ${{ needs.ci.outputs.image_tag }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+      skip_acceptance_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_acceptance_tests || 'true') }}
+      acceptance_test_repo: ${{ needs.resolve_config.outputs.acceptance_test_repo }}
+      acceptance_test_repo_branch: ${{ inputs['Acceptance Test Repo Branch'] }}
+      acceptance_test_parameters: ${{ needs.resolve_config.outputs.acceptance_test_params_horizon != '' && needs.resolve_config.outputs.acceptance_test_params_horizon || needs.resolve_config.outputs.acceptance_test_params }}
+      cron_expression: ${{ needs.resolve_config.outputs.cron_job_schedule }}
+      java_options: ${{ needs.resolve_config.outputs.java_options }}
+      enable_jira_aio: ${{ fromJSON(needs.resolve_config.outputs.enable_jira_aio || 'false') }}
+      jira_aio_cycle_key: ${{ inputs['Jira AIO Cycle Key'] }}
+      jira_aio_team: ${{ needs.resolve_config.outputs.jira_aio_team }}
+      jira_aio_project_key: ${{ needs.resolve_config.outputs.jira_aio_project_key }}
+      jira_aio_cycle_title: ${{ needs.resolve_config.outputs.jira_aio_cycle_title }}
+      jira_aio_cycle_folder: ${{ needs.resolve_config.outputs.jira_aio_cycle_folder }}
+      jira_aio_report_path_override: ${{ needs.resolve_config.outputs.jira_aio_report_path_override }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      JIRA_AIO_API_TOKEN: ${{ secrets.JIRA_AIO_API_TOKEN }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      RANCHER_DEV: ${{ secrets.RANCHER1_HORIZON_DEV }}
+      RANCHER_QA: ${{ secrets.RANCHER1_HORIZON_QA }}
+      RANCHER_INT: ${{ secrets.RANCHER1_HORIZON_INT }}
+      RANCHER_PROD_LNX: ${{ secrets.RANCHER1_HORIZON_PROD_LNX }}
+      RANCHER_PROD_STL: ${{ secrets.RANCHER1_HORIZON_PROD_STL }}
+      ENVIRONMENT_PROVISIONER_APP_CLIENT_ID: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_CLIENT_ID }}
+      ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY }}
+
+  deploy_launch:
+    name: CD (Launch)
+    if: ${{ success() && !cancelled() && inputs['Deploy to Launch'] }}
+    needs: [ resolve_config, ci ]
+    uses: xplor-pay/github-actions/.github/workflows/java-deploy-to-environment-reusable.yml@main
+    with:
+      rancher_environment_name: 'Launch'
+      rancher_stack_name: ${{ needs.resolve_config.outputs.rancher_stack_name }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_scale_dev: ${{ fromJSON(needs.resolve_config.outputs.container_scale_dev) }}
+      container_scale_qa: ${{ fromJSON(needs.resolve_config.outputs.container_scale_qa) }}
+      container_scale_int: ${{ fromJSON(needs.resolve_config.outputs.container_scale_int) }}
+      container_scale_prod_lnx: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_lnx) }}
+      container_scale_prod_stl: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_stl) }}
+      application_type: ${{ needs.resolve_config.outputs.application_type }}
+      image_tag: ${{ needs.ci.outputs.image_tag }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+      skip_acceptance_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_acceptance_tests || 'true') }}
+      acceptance_test_repo: ${{ needs.resolve_config.outputs.acceptance_test_repo }}
+      acceptance_test_repo_branch: ${{ inputs['Acceptance Test Repo Branch'] }}
+      acceptance_test_parameters: ${{ needs.resolve_config.outputs.acceptance_test_params_launch != '' && needs.resolve_config.outputs.acceptance_test_params_launch || needs.resolve_config.outputs.acceptance_test_params }}
+      cron_expression: ${{ needs.resolve_config.outputs.cron_job_schedule }}
+      java_options: ${{ needs.resolve_config.outputs.java_options }}
+      enable_jira_aio: ${{ fromJSON(needs.resolve_config.outputs.enable_jira_aio || 'false') }}
+      jira_aio_cycle_key: ${{ inputs['Jira AIO Cycle Key'] }}
+      jira_aio_team: ${{ needs.resolve_config.outputs.jira_aio_team }}
+      jira_aio_project_key: ${{ needs.resolve_config.outputs.jira_aio_project_key }}
+      jira_aio_cycle_title: ${{ needs.resolve_config.outputs.jira_aio_cycle_title }}
+      jira_aio_cycle_folder: ${{ needs.resolve_config.outputs.jira_aio_cycle_folder }}
+      jira_aio_report_path_override: ${{ needs.resolve_config.outputs.jira_aio_report_path_override }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      JIRA_AIO_API_TOKEN: ${{ secrets.JIRA_AIO_API_TOKEN }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      RANCHER_DEV: ${{ secrets.RANCHER1_LAUNCH_DEV }}
+      RANCHER_QA: ${{ secrets.RANCHER1_LAUNCH_QA }}
+      RANCHER_INT: ${{ secrets.RANCHER1_LAUNCH_INT }}
+      RANCHER_PROD_LNX: ${{ secrets.RANCHER1_LAUNCH_PROD_LNX }}
+      RANCHER_PROD_STL: ${{ secrets.RANCHER1_LAUNCH_PROD_STL }}
+      ENVIRONMENT_PROVISIONER_APP_CLIENT_ID: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_CLIENT_ID }}
+      ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY }}
+
+  deploy_quest:
+    name: CD (Quest)
+    if: ${{ success() && !cancelled() && inputs['Deploy to Quest'] }}
+    needs: [ resolve_config, ci ]
+    uses: xplor-pay/github-actions/.github/workflows/java-deploy-to-environment-reusable.yml@main
+    with:
+      rancher_environment_name: 'Quest'
+      rancher_stack_name: ${{ needs.resolve_config.outputs.rancher_stack_name }}
+      project_name: ${{ needs.resolve_config.outputs.project_name }}
+      container_scale_dev: ${{ fromJSON(needs.resolve_config.outputs.container_scale_dev) }}
+      container_scale_qa: ${{ fromJSON(needs.resolve_config.outputs.container_scale_qa) }}
+      container_scale_int: ${{ fromJSON(needs.resolve_config.outputs.container_scale_int) }}
+      container_scale_prod_lnx: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_lnx) }}
+      container_scale_prod_stl: ${{ fromJSON(needs.resolve_config.outputs.container_scale_prod_stl) }}
+      application_type: ${{ needs.resolve_config.outputs.application_type }}
+      image_tag: ${{ needs.ci.outputs.image_tag }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
+      skip_acceptance_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_acceptance_tests || 'true') }}
+      acceptance_test_repo: ${{ needs.resolve_config.outputs.acceptance_test_repo }}
+      acceptance_test_repo_branch: ${{ inputs['Acceptance Test Repo Branch'] }}
+      acceptance_test_parameters: ${{ needs.resolve_config.outputs.acceptance_test_params_quest != '' && needs.resolve_config.outputs.acceptance_test_params_quest || needs.resolve_config.outputs.acceptance_test_params }}
+      cron_expression: ${{ needs.resolve_config.outputs.cron_job_schedule }}
+      java_options: ${{ needs.resolve_config.outputs.java_options }}
+      enable_jira_aio: ${{ fromJSON(needs.resolve_config.outputs.enable_jira_aio || 'false') }}
+      jira_aio_cycle_key: ${{ inputs['Jira AIO Cycle Key'] }}
+      jira_aio_team: ${{ needs.resolve_config.outputs.jira_aio_team }}
+      jira_aio_project_key: ${{ needs.resolve_config.outputs.jira_aio_project_key }}
+      jira_aio_cycle_title: ${{ needs.resolve_config.outputs.jira_aio_cycle_title }}
+      jira_aio_cycle_folder: ${{ needs.resolve_config.outputs.jira_aio_cycle_folder }}
+      jira_aio_report_path_override: ${{ needs.resolve_config.outputs.jira_aio_report_path_override }}
+    secrets:
+      PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
+      PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      JIRA_AIO_API_TOKEN: ${{ secrets.JIRA_AIO_API_TOKEN }}
+      PACKAGE_READER_PAT_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+      PACKAGE_READER_PAT_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      RANCHER_DEV: ${{ secrets.RANCHER1_QUEST_DEV }}
+      RANCHER_QA: ${{ secrets.RANCHER1_QUEST_QA }}
+      RANCHER_INT: ${{ secrets.RANCHER1_QUEST_INT }}
+      RANCHER_PROD_LNX: ${{ secrets.RANCHER1_QUEST_PROD_LNX }}
+      RANCHER_PROD_STL: ${{ secrets.RANCHER1_QUEST_PROD_STL }}
+      ENVIRONMENT_PROVISIONER_APP_CLIENT_ID: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_CLIENT_ID }}
+      ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.ENVIRONMENT_PROVISIONER_APP_PRIVATE_KEY }}
+

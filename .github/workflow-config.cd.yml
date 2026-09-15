@@ -1,0 +1,37 @@
+configuration:
+
+  ########################################################################################################
+  # Continuous Delivery Settings
+  ########################################################################################################
+
+  # The name of the service being deployed. 
+  # This should match the service name in Rancher or Kubernetes.
+  project_name: 
+
+  # The number of images to retain when excess container images are deleted.
+  # Default value is 50.
+  container_images_to_retain: 50
+
+  # The port where health checks are exposed. Default value is 80.
+  health_check_port: 80
+
+  # (Optional) The endpoint path for health checks
+  health_check_path: ''
+
+  # If this is a cron job, specify the schedule using standard cron syntax.
+  # For example, '0 0 * * *' (every day at midnight).
+  # If this is not a cron job, please leave the field as an empty string.
+  cron_job_schedule: ''
+
+  # Whether to skip acceptance tests during the build process.
+  skip_acceptance_tests: true
+
+  # (Optional) The name of the acceptance test repo, or '' if no repo exists
+  # To get acceptance tests running, both the acceptance test repo name
+  # must be provided, and skip_acceptance_tests (above) must be set to false.
+  acceptance_test_repo: ''
+
+  # (Optional) Additional command-line options for acceptance tests
+  # For example: "--filter "TestRegions ~ gb"
+  # Please leave this as an empty string for default behavior.
+  acceptance_test_params: ''

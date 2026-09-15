@@ -1,0 +1,33 @@
+configuration:
+
+  ########################################################################################################
+  # Application Metadata
+  ########################################################################################################
+
+  # Type of application being deployed. Valid values are web_service, service, or cron_job.
+  application_type: ''
+
+  # (Optional) The size of the application. Valid values are small, medium, large, and x-large.
+  # Otherwise, please set it to an empty string.
+  # For more information on each size, please see the following documentation:
+  # https://xplortechnologies.atlassian.net/wiki/x/WgqmPw
+  application_size: ''
+
+  # (Optional) The classification for this service. Valid values: 'class_a_plus', 'class_a', 'class_b', 'class_c'
+  # Otherwise, please set it to an empty string.
+  # For more information on each classification, please see the following documentation:
+  # https://xplortechnologies.atlassian.net/wiki/x/KoD5Qw
+  service_classification: ''
+
+  # Primary language of the repository.
+  # If a repo contains both typescript and javascript, set the value to 'typescript'.
+  # Valid values are as follows: 'dotnet', 'java', 'typescript', 'javascript', 'python', 'go', 'ruby'
+  repository_language: 'java'
+
+  # Type of repository.
+  # Valid values are as follows: 'deployable', 'package', 'acceptance_test'
+  # 'deployable' means the repository contains a deployable application, such as a web service or a service.
+  # 'package' means the repository generates a reusable package or library that gets pushed to GitHub Packages
+  # such as a NuGet package, a Maven package, or an npm package.
+  # 'acceptance_test' means it is an acceptance test repository.
+  repository_type: 'deployable'

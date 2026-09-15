@@ -1,0 +1,81 @@
+name: CI
+
+run-name: >-
+  ${{
+    github.event_name == 'pull_request' &&
+    format('CI • PR #{0} • {1} -> {2} • Attempt #{3}', 
+      github.event.pull_request.number, 
+      github.event.pull_request.head.ref, 
+      github.event.pull_request.base.ref, 
+      github.run_attempt
+    ) ||
+    github.event_name == 'workflow_dispatch' &&
+      format('CI • Manual • {0} • Attempt #{1}', 
+        github.ref_name, 
+        github.run_attempt
+      ) ||
+    format('CI • Push • {0} • Attempt #{1}', 
+      github.ref_name, 
+      github.run_attempt
+    )
+  }}
+
+# Define what triggers the workflow
+on:
+  push:
+    branches: [ "main", "master" ]
+    paths-ignore:
+      - '**.md'
+      - '**.yml'
+      - '**.yaml'
+      - '**.json'
+      - '**.xml'
+      - '**.config'
+      - '**.editorconfig'
+      - '**.gitignore'
+      - '**.gitattributes'
+      - '.github/**'
+
+  pull_request:
+    branches: [ "main", "master" ]
+
+  workflow_dispatch:
+
+# Cancel any workflows already in progress if new commits are pushed to the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Cancel older in-progress runs for PR updates; keep manual dispatch runs stable
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Permissions required by this workflow
+permissions:
+  pull-requests: write
+  contents: write
+  checks: write
+  actions: read
+
+# The work the workflow will perform
+jobs:
+  resolve_config:
+    name: Resolve Config
+    uses: xplor-pay/github-actions/.github/workflows/parse-workflow-config-reusable.yml@main
+
+  ci:
+    name: CI
+    needs: [ resolve_config ]
+    uses: xplor-pay/github-actions/.github/workflows/java-ci-reusable.yml@main
+    with:
+      java_version: ${{ needs.resolve_config.outputs.java_version }}
+      java_distribution: ${{ needs.resolve_config.outputs.java_distribution }}
+      java_download_url: ${{ needs.resolve_config.outputs.java_download_url }}
+      java_download_sha256: ${{ needs.resolve_config.outputs.java_download_sha256 }}
+      enable_dependency_cache: ${{ fromJSON(needs.resolve_config.outputs.enable_dependency_cache || 'false') }}
+      minimum_code_coverage: ${{ needs.resolve_config.outputs.minimum_code_coverage != '' && needs.resolve_config.outputs.minimum_code_coverage || '0' }}
+      skip_unit_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_unit_tests || 'false') }}
+      skip_integration_tests: ${{ fromJSON(needs.resolve_config.outputs.skip_integration_tests || 'true') }}
+      skip_linting: ${{ fromJSON(needs.resolve_config.outputs.skip_linting || 'false') }}
+      continue_on_linting_error: ${{ fromJson(needs.resolve_config.outputs.continue_on_linting_error || 'false') }}
+    secrets:
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGE_READER_PAT_TOKEN }}
+      GITHUB_PACKAGES_USERNAME: ${{ secrets.PACKAGE_READER_PAT_USERNAME }}
+
