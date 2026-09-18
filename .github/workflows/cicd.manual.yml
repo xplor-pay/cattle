@@ -246,7 +246,7 @@ jobs:
       skip_linting: ${{ fromJSON(needs.resolve_config.outputs.skip_linting || 'false') }}
       continue_on_linting_error: ${{ fromJson(needs.resolve_config.outputs.continue_on_linting_error || 'false') }}
       project_name: ${{ needs.resolve_config.outputs.project_name }}
-      container_images_to_retain: ${{ needs.resolve_config.outputs.container_images_to_retain }}
+      container_images_to_retain: ${{ fromJSON(needs.resolve_config.outputs.container_images_to_retain || '50') }}
     secrets:
       PACKAGE_WRITER_APP_CLIENT_ID: ${{ secrets.PACKAGE_WRITER_APP_CLIENT_ID }}
       PACKAGE_WRITER_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_WRITER_APP_PRIVATE_KEY }}
